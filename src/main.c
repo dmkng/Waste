@@ -189,7 +189,7 @@ int main(int argc, char* argv[]) {
 
 			// Increment counter and convert it to string
 			char text[21];
-			snprintf(text, 20, "%llu", ++count);
+			snprintf(text, 20, "%" PRIu64, ++count);
 
 			// Refresh counter text
 			SDL_DestroyTexture(counter);

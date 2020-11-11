@@ -29,11 +29,13 @@ ifeq ($(OS), Windows_NT)
 	LDFLAGS += -mwindows
 	ifeq ($(MSYSTEM), MINGW32)
 		TEST := cmd //c $(subst /,//,$(TEST))
-		DEL := rm -rf $(BD)/$(EXE) $(TMP)/*
+		NUL := /dev/null
+		DEL := rm -f $(BD)/$(EXE) $(TMP)/*
 		TIME := echo "        Compile Time: `date +%T`"
 		NL := echo ""
 	else
-		DEL := del /f /q $(WIN_BD)\\$(EXE) $(WIN_TMP)\\* >nul 2>nul
+		NUL := nul
+		DEL := del /f /q $(WIN_BD)\\$(EXE) $(WIN_TMP)\\* & type nul >$(WIN_TMP)\\.keep
 		TIME := echo:        Compile Time: %time:~0,8%
 		NL := echo:
 		CCFLAGS += -IC:/MinGW/include
@@ -42,7 +44,8 @@ ifeq ($(OS), Windows_NT)
 else
 	BD := $(NAME)_Linux
 	EXE := $(NAME)
-	TEST := cd $(BD) && cp -f $(EXE) /tmp/$(EXE) && chmod +x /tmp/$(EXE) && x-terminal-emulator -T $(NAME) -e "/tmp/$(EXE) $(ARGS)" && rm -f /tmp/$(EXE)
+	TEST := cd $(BD) && cp -f $(EXE) /tmp/$(EXE) && chmod +x /tmp/$(EXE) && xterm -T $(NAME) -e "/tmp/$(EXE) $(ARGS)" && rm -f /tmp/$(EXE)
+	NUL := /dev/null
 	DEL := rm -f $(BD)/$(EXE) $(TMP)/*
 	TIME := echo "        Compile Time: `date +%T`"
 	NL := echo ""
@@ -70,7 +73,7 @@ $(BD)/$(EXE): $(patsubst $(SRC)/%.c,$(TMP)/%$(TAG).o,$(wildcard $(SRC)/*.c))
 
 .PHONY: clean
 clean:
-	-@$(DEL)
+	-@$(DEL) >$(NUL) 2>&1
 
 .PHONY: run test
 run test:
