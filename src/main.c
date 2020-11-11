@@ -183,13 +183,16 @@ int main(int argc, char* argv[]) {
 			}
 		}
 
-		if(SDL_GetTicks() - counter_ticks >= 1000) { // 1 second elapsed
+		// Counter
+		ticks = SDL_GetTicks() - counter_ticks;
+		if(ticks >= 1000) { // 1 second elapsed
 			// Restart counter timer
 			counter_ticks = SDL_GetTicks();
 
 			// Increment counter and convert it to string
+			count += ticks / 1000;
 			char text[21];
-			snprintf(text, 20, "%" PRIu64, ++count);
+			snprintf(text, 20, "%" PRIu64, count);
 
 			// Refresh counter text
 			SDL_DestroyTexture(counter);
