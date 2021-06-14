@@ -3,7 +3,7 @@ TMP := tmp
 SRC := src
 INCLUDE := include
 CC := gcc
-CCFLAGS := -Wall -Wextra -Wpedantic -Wno-unused-parameter -Wno-write-strings -std=c11
+CCFLAGS := -Wall -Wextra -Wpedantic -Wno-unused-parameter -std=c11
 LDFLAGS :=
 LDLIBS := -lSDL2 -lSDL2_ttf -lSDL2_mixer
 ARGS :=
@@ -27,7 +27,7 @@ ifeq ($(OS), Windows_NT)
 	WIN_TMP := $(subst /,\\,$(TMP))
 	TEST := start "$(NAME) " cmd /c "cd $(WIN_BD) & $(EXE) $(ARGS) & echo. & pause"
 	LDFLAGS += -mwindows
-	ifeq ($(MSYSTEM), MINGW32)
+	ifdef MSYSTEM
 		TEST := cmd //c $(subst /,//,$(TEST))
 		NUL := /dev/null
 		DEL := rm -f $(BD)/$(EXE) $(TMP)/*
@@ -35,7 +35,7 @@ ifeq ($(OS), Windows_NT)
 		NL := echo ""
 	else
 		NUL := nul
-		DEL := del /f /q $(WIN_BD)\\$(EXE) $(WIN_TMP)\\* & type nul >$(WIN_TMP)\\.keep
+		DEL := attrib +r $(WIN_TMP)\\.keep >nul 2>&1 & del /f /q $(WIN_BD)\\$(EXE) $(WIN_TMP)\\*
 		TIME := echo:        Compile Time: %time:~0,8%
 		NL := echo:
 		CCFLAGS += -IC:/MinGW/include
@@ -60,9 +60,6 @@ info:
 	@$(TIME)
 	@echo ======================================
 	@$(NL)
-
-$(TMP)/main$(TAG).o: $(SRC)/main.c
-	$(CC) $(CCFLAGS) $< -c -o $@
 
 $(TMP)/%$(TAG).o: $(SRC)/%.c $(wildcard $(INCLUDE)/*.h)
 	$(CC) $(CCFLAGS) $< -c -o $@

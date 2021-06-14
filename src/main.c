@@ -8,12 +8,12 @@
 #include <stdint.h>
 #include <stdio.h>
 
-SDL_Texture* RenderText(SDL_Renderer* renderer, TTF_Font* font, const char* text, SDL_Color color);
-void DisplayError(const char* title, uint8_t type, const char* desc);
+void DisplayError(const char *title, uint8_t type, const char *desc);
+SDL_Texture *RenderText(SDL_Renderer *renderer, TTF_Font *font, const char *text, SDL_Color color);
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
 	// Window title
-	const char* title = "Waste";
+	const char *title = "Waste";
 
 	// Window dimensions
 	int width = 800;
@@ -30,8 +30,6 @@ int main(int argc, char* argv[]) {
 	// For timers
 	uint32_t counter_ticks;
 	uint32_t frame_ticks;
-
-	// Frame ticks
 	uint32_t ticks;
 
 	// Static FPS value
@@ -44,7 +42,7 @@ int main(int argc, char* argv[]) {
 	uint8_t muted = 0;
 
 	// Arguments loop
-	for(int i = 1; i < argc; i++) {
+	for(int i = 1; i < argc; ++i) {
 		if(!muted && (!strcmp(argv[i], "--mute") || !strcmp(argv[i], "-m"))) {
 			muted = 1;
 		}
@@ -57,7 +55,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	// Create window
-	SDL_Window* window = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, 0);
+	SDL_Window *window = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, 0);
 	if(window == NULL) {
 		DisplayError(title, 0, "Can't create window");
 		SDL_Quit();
@@ -65,7 +63,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	// Create renderer
-	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+	SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 	if(renderer == NULL) {
 		DisplayError(title, 0, "Can't create renderer");
 		SDL_DestroyWindow(window);
@@ -92,8 +90,8 @@ int main(int argc, char* argv[]) {
 	}
 
 	// Load fonts
-	TTF_Font* normal_font = TTF_OpenFont("res/DroidSans.ttf", 30);
-	TTF_Font* counter_font = TTF_OpenFont("res/DroidSans.ttf", 80);
+	TTF_Font *normal_font = TTF_OpenFont("res/DroidSans.ttf", 30);
+	TTF_Font *counter_font = TTF_OpenFont("res/DroidSans.ttf", 80);
 	if(normal_font == NULL || counter_font == NULL) {
 		DisplayError(title, 1, "Can't load required fonts");
 		SDL_DestroyRenderer(renderer);
@@ -117,7 +115,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	// Load sounds
-	Mix_Music* music = Mix_LoadMUS("res/music.wav");
+	Mix_Music *music = Mix_LoadMUS("res/music.wav");
 	if(music == NULL) {
 		DisplayError(title, 2, "Can't load required sounds");
 		TTF_CloseFont(normal_font);
@@ -135,7 +133,7 @@ int main(int argc, char* argv[]) {
 	SDL_Color black = { 0, 0, 0, 255 };
 
 	// Create upper text
-	SDL_Texture* upper_text = RenderText(renderer, normal_font, "You just wasted", black);
+	SDL_Texture *upper_text = RenderText(renderer, normal_font, "You just wasted", black);
 
 	// Get upper text size
 	SDL_QueryTexture(upper_text, NULL, NULL, &upper_rect.w, &upper_rect.h);
@@ -145,7 +143,7 @@ int main(int argc, char* argv[]) {
 	upper_rect.y = 210;
 
 	// Create lower text
-	SDL_Texture* lower_text = RenderText(renderer, normal_font, "seconds of your life.", black);
+	SDL_Texture *lower_text = RenderText(renderer, normal_font, "seconds of your life.", black);
 
 	// Get lower text size
 	SDL_QueryTexture(lower_text, NULL, NULL, &lower_rect.w, &lower_rect.h);
@@ -155,7 +153,7 @@ int main(int argc, char* argv[]) {
 	lower_rect.y = height - 210 - lower_rect.h;
 
 	// Create counter text
-	SDL_Texture* counter = RenderText(renderer, counter_font, "0", black);
+	SDL_Texture *counter = RenderText(renderer, counter_font, "0", black);
 
 	// Play music
 	Mix_PlayMusic(music, -1);
@@ -167,6 +165,9 @@ int main(int argc, char* argv[]) {
 
 	// Start counter timer
 	counter_ticks = SDL_GetTicks();
+
+	// Counter text
+	char text[21];
 
 	while(1) {
 		// Events
@@ -191,8 +192,7 @@ int main(int argc, char* argv[]) {
 
 			// Increment counter and convert it to string
 			count += ticks / 1000;
-			char text[21];
-			snprintf(text, 20, "%" PRIu64, count);
+			snprintf(text, 21, "%" PRIu64, count);
 
 			// Refresh counter text
 			SDL_DestroyTexture(counter);
@@ -257,11 +257,11 @@ int main(int argc, char* argv[]) {
 	return 0;
 }
 
-////////////////////////////////////////////////// Functions //////////////////////////////////////////////////
+//////////////////////////////////////////// Functions /////////////////////////////////////////////
 
-void DisplayError(const char* title, uint8_t type, const char* desc) {
+void DisplayError(const char *title, uint8_t type, const char *desc) {
 	// Get SDL Error
-	const char* err;
+	const char *err;
 	switch(type) {
 		case 1:
 			err = TTF_GetError();
@@ -278,7 +278,7 @@ void DisplayError(const char* title, uint8_t type, const char* desc) {
 	size_t err_len = strlen(err);
 
 	// Build string
-	char* str = malloc(desc_len + err_len + 4);
+	char *str = malloc(desc_len + err_len + 4);
 	memcpy(str, desc, desc_len);
 	memcpy(str + desc_len, " (", 2);
 	memcpy(str + desc_len + 2, err, err_len);
@@ -287,17 +287,18 @@ void DisplayError(const char* title, uint8_t type, const char* desc) {
 	// Display string
 	printf("%s\n", str);
 	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, title, str, NULL);
+	free(str);
 }
 
-SDL_Texture* RenderText(SDL_Renderer* renderer, TTF_Font* font, const char* text, SDL_Color color) {
+SDL_Texture *RenderText(SDL_Renderer *renderer, TTF_Font *font, const char *text, SDL_Color color) {
 	// Render surface with text
-	SDL_Surface* surface = TTF_RenderUTF8_Blended(font, text, color);
+	SDL_Surface *surface = TTF_RenderUTF8_Blended(font, text, color);
 	if(surface == NULL) {
 		return NULL;
 	}
 
 	// Convert surface to texture
-	SDL_Texture* rendered_text = SDL_CreateTextureFromSurface(renderer, surface);
+	SDL_Texture *rendered_text = SDL_CreateTextureFromSurface(renderer, surface);
 
 	// Destroy surface
 	SDL_FreeSurface(surface);

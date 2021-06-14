@@ -18,11 +18,11 @@ Waste is a simple program showing how many seconds of your life you have wasted,
 		* Open `MSYS2 MinGW 32-bit` from the Start menu
 		* Install needed software
 	  ```
-	  $ pacman -S mingw-w64-i686-toolchain mingw-w64-i686-SDL2 mingw-w64-i686-SDL2_mixer  mingw-w64-i686-SDL2_ttf
+	  $ pacman -S mingw-w64-i686-toolchain mingw-w64-i686-SDL2 mingw-w64-i686-SDL2_mixer mingw-w64-i686-SDL2_ttf
 	  ```
 * **Clone this repository**
   ```
-  $ git clone https://github.com/DieMaking/Waste.git
+  $ git clone https://github.com/dmkng/Waste.git
   ```
 * **Compile and run**
   ```
