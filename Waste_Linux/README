@@ -1,0 +1,12 @@
+This program needs libraries specified below:
+- SDL2
+- SDL2_ttf
+- SDL2_mixer
+
+Installation:
+
+Debian / Ubuntu:
+# apt install libsdl2-2.0-0 libsdl2-ttf-2.0-0 libsdl2-mixer-2.0-0
+
+Arch / Manjaro:
+# pacman -S sdl2 sdl2_ttf sdl2_mixer

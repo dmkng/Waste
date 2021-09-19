@@ -1,0 +1,7 @@
+tmp/*
+!tmp/.keep
+Waste_Windows/*
+Waste_Linux/*
+!Waste_Windows/res/
+!Waste_Linux/res/
+!Waste_Linux/README
