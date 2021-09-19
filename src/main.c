@@ -4,9 +4,9 @@
 #include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL_mixer.h>
 
-#include <string.h>
-#include <stdint.h>
 #include <stdio.h>
+#include <string.h>
+#include <inttypes.h>
 
 void DisplayError(const char *title, uint8_t type, const char *desc);
 SDL_Texture *RenderText(SDL_Renderer *renderer, TTF_Font *font, const char *text, SDL_Color color);
