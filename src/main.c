@@ -1,24 +1,35 @@
+// Main handling is not needed at least on Windows and Linux
 #define SDL_MAIN_HANDLED
-
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_ttf.h>
-#include <SDL2/SDL_mixer.h>
 
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
 
-void DisplayError(const char *title, uint8_t type, const char *desc);
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
+#include <SDL2/SDL_mixer.h>
+
+// Window title
+#define TITLE "Waste"
+
+// Window dimensions
+#define WIDTH 800
+#define HEIGHT 600
+
+// Text lines
+#define UPPER "You just wasted"
+#define LOWER "seconds of your life."
+
+// FPS lock in addition to VSync
+//#define FPS 60
+
+// Error description macro
+#define DESC(str) str, sizeof(str)
+
+void DisplayError(uint8_t type, const char *desc, size_t desclen);
 SDL_Texture *RenderText(SDL_Renderer *renderer, TTF_Font *font, const char *text, SDL_Color color);
 
 int main(int argc, char *argv[]) {
-	// Window title
-	const char *title = "Waste";
-
-	// Window dimensions
-	int width = 800;
-	int height = 600;
-
 	// For resizing and setting position
 	SDL_Rect upper_rect;
 	SDL_Rect lower_rect;
@@ -28,12 +39,8 @@ int main(int argc, char *argv[]) {
 	SDL_Event e;
 
 	// For timers
-	uint32_t counter_ticks;
-	uint32_t frame_ticks;
 	uint32_t ticks;
-
-	// Static FPS value
-	uint32_t fps = 60;
+	uint32_t counter_ticks;
 
 	// Counter
 	uint64_t count = 0;
@@ -50,22 +57,33 @@ int main(int argc, char *argv[]) {
 
 	// Init SDL
 	if(SDL_Init(SDL_INIT_EVERYTHING) < 0) {
-		DisplayError(title, 0, "Can't init SDL");
+		DisplayError(0, DESC("Can't init SDL"));
+		return 1;
+	}
+
+	// Init font engine
+	if(TTF_Init() < 0) {
+		DisplayError(1, DESC("Can't init font engine"));
+		SDL_Quit();
 		return 1;
 	}
 
 	// Create window
-	SDL_Window *window = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, 0);
+	SDL_Window *window = SDL_CreateWindow(
+		TITLE, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, 0
+	);
 	if(window == NULL) {
-		DisplayError(title, 0, "Can't create window");
+		DisplayError(0, DESC("Can't create window"));
 		SDL_Quit();
 		return 1;
 	}
 
 	// Create renderer
-	SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+	SDL_Renderer *renderer = SDL_CreateRenderer(
+		window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
+	);
 	if(renderer == NULL) {
-		DisplayError(title, 0, "Can't create renderer");
+		DisplayError(0, DESC("Can't create renderer"));
 		SDL_DestroyWindow(window);
 		SDL_Quit();
 		return 1;
@@ -73,16 +91,7 @@ int main(int argc, char *argv[]) {
 
 	// Set window background color
 	if(SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255) != 0) {
-		DisplayError(title, 0, "Can't create window");
-		SDL_DestroyRenderer(renderer);
-		SDL_DestroyWindow(window);
-		SDL_Quit();
-		return 1;
-	}
-
-	// Init font engine
-	if(TTF_Init() < 0) {
-		DisplayError(title, 1, "Can't init font engine");
+		DisplayError(0, DESC("Can't init window"));
 		SDL_DestroyRenderer(renderer);
 		SDL_DestroyWindow(window);
 		SDL_Quit();
@@ -91,9 +100,18 @@ int main(int argc, char *argv[]) {
 
 	// Load fonts
 	TTF_Font *normal_font = TTF_OpenFont("res/DroidSans.ttf", 30);
+	if(normal_font == NULL) {
+		DisplayError(1, DESC("Can't load required fonts"));
+		SDL_DestroyRenderer(renderer);
+		SDL_DestroyWindow(window);
+		TTF_Quit();
+		SDL_Quit();
+		return 1;
+	}
 	TTF_Font *counter_font = TTF_OpenFont("res/DroidSans.ttf", 80);
-	if(normal_font == NULL || counter_font == NULL) {
-		DisplayError(title, 1, "Can't load required fonts");
+	if(counter_font == NULL) {
+		DisplayError(1, DESC("Can't load required fonts"));
+		TTF_CloseFont(normal_font);
 		SDL_DestroyRenderer(renderer);
 		SDL_DestroyWindow(window);
 		TTF_Quit();
@@ -103,7 +121,7 @@ int main(int argc, char *argv[]) {
 
 	// Open audio device
 	if(Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 4096) == -1) {
-		DisplayError(title, 2, "Can't open audio device");
+		DisplayError(2, DESC("Can't open audio device"));
 		TTF_CloseFont(normal_font);
 		TTF_CloseFont(counter_font);
 		SDL_DestroyRenderer(renderer);
@@ -117,7 +135,7 @@ int main(int argc, char *argv[]) {
 	// Load sounds
 	Mix_Music *music = Mix_LoadMUS("res/music.wav");
 	if(music == NULL) {
-		DisplayError(title, 2, "Can't load required sounds");
+		DisplayError(2, DESC("Can't load required sounds"));
 		TTF_CloseFont(normal_font);
 		TTF_CloseFont(counter_font);
 		SDL_DestroyRenderer(renderer);
@@ -133,24 +151,24 @@ int main(int argc, char *argv[]) {
 	SDL_Color black = { 0, 0, 0, 255 };
 
 	// Create upper text
-	SDL_Texture *upper_text = RenderText(renderer, normal_font, "You just wasted", black);
+	SDL_Texture *upper_text = RenderText(renderer, normal_font, UPPER, black);
 
 	// Get upper text size
 	SDL_QueryTexture(upper_text, NULL, NULL, &upper_rect.w, &upper_rect.h);
 
 	// Set upper text position
-	upper_rect.x = width / 2 - upper_rect.w / 2;
+	upper_rect.x = WIDTH / 2 - upper_rect.w / 2;
 	upper_rect.y = 210;
 
 	// Create lower text
-	SDL_Texture *lower_text = RenderText(renderer, normal_font, "seconds of your life.", black);
+	SDL_Texture *lower_text = RenderText(renderer, normal_font, LOWER, black);
 
 	// Get lower text size
 	SDL_QueryTexture(lower_text, NULL, NULL, &lower_rect.w, &lower_rect.h);
 
 	// Set lower text position
-	lower_rect.x = width / 2 - lower_rect.w / 2;
-	lower_rect.y = height - 210 - lower_rect.h;
+	lower_rect.x = WIDTH / 2 - lower_rect.w / 2;
+	lower_rect.y = HEIGHT - 210 - lower_rect.h;
 
 	// Create counter text
 	SDL_Texture *counter = RenderText(renderer, counter_font, "0", black);
@@ -174,7 +192,8 @@ int main(int argc, char *argv[]) {
 		if(SDL_PollEvent(&e)) {
 			if(e.type == SDL_QUIT) {
 				break;
-			} else if(e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_m) { // key M pressed down
+			} else if(e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_m) {
+				// Key M pressed down
 				muted = !muted;
 				if(muted) {
 					Mix_PauseMusic();
@@ -199,8 +218,10 @@ int main(int argc, char *argv[]) {
 			counter = RenderText(renderer, counter_font, text, black);
 		}
 
-		// Start frame timer
-		frame_ticks = SDL_GetTicks();
+		#ifdef FPS
+			// Start frame timer
+			ticks = SDL_GetTicks();
+		#endif
 
 		// Clear renderer
 		SDL_RenderClear(renderer);
@@ -215,8 +236,8 @@ int main(int argc, char *argv[]) {
 		SDL_QueryTexture(counter, NULL, NULL, &rect.w, &rect.h);
 
 		// Set counter text position
-		rect.x = width / 2 - rect.w / 2;
-		rect.y = height / 2 - rect.h / 2;
+		rect.x = WIDTH / 2 - rect.w / 2;
+		rect.y = HEIGHT / 2 - rect.h / 2;
 
 		// Display counter text
 		SDL_RenderCopy(renderer, counter, NULL, &rect);
@@ -224,11 +245,13 @@ int main(int argc, char *argv[]) {
 		// Show render
 		SDL_RenderPresent(renderer);
 
-		// Wait remaining time
-		ticks = SDL_GetTicks() - frame_ticks;
-		if(ticks < 1000 / fps) {
-			SDL_Delay(1000 / fps - ticks);
-		}
+		#ifdef FPS
+			// Wait remaining time
+			ticks = SDL_GetTicks() - ticks;
+			if(ticks < 1000 / FPS) {
+				SDL_Delay(1000 / FPS - ticks);
+			}
+		#endif
 	}
 
 	// Destroy textures
@@ -257,9 +280,9 @@ int main(int argc, char *argv[]) {
 	return 0;
 }
 
-//////////////////////////////////////////// Functions /////////////////////////////////////////////
+//////////////////////////////////////// Functions ////////////////////////////////////////
 
-void DisplayError(const char *title, uint8_t type, const char *desc) {
+void DisplayError(uint8_t type, const char *desc, size_t desc_len) {
 	// Get SDL Error
 	const char *err;
 	switch(type) {
@@ -273,20 +296,19 @@ void DisplayError(const char *title, uint8_t type, const char *desc) {
 			err = SDL_GetError();
 	}
 
-	// Calculate string lengths
-	size_t desc_len = strlen(desc);
+	// Calculate string length
 	size_t err_len = strlen(err);
 
-	// Build string
-	char *str = malloc(desc_len + err_len + 4);
-	memcpy(str, desc, desc_len);
-	memcpy(str + desc_len, " (", 2);
-	memcpy(str + desc_len + 2, err, err_len);
-	memcpy(str + desc_len + 2 + err_len, ")\0", 2);
+	// Build string (very fast way)
+	char *str = malloc(desc_len + err_len + 3);
+	memcpy(str, desc, desc_len - 1);
+	memcpy(str + desc_len - 1, " (", 2);
+	memcpy(str + desc_len + 1, err, err_len);
+	memcpy(str + desc_len + err_len + 1, ")\0", 2);
 
 	// Display string
-	printf("%s\n", str);
-	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, title, str, NULL);
+	puts(str);
+	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, TITLE, str, NULL);
 	free(str);
 }
 
