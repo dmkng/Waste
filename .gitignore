@@ -1,7 +1,5 @@
-tmp/*
-!tmp/.keep
-Waste_Windows/*
-Waste_Linux/*
-!Waste_Windows/res/
-!Waste_Linux/res/
-!Waste_Linux/README
+build/*
+!build/.keep
+Waste-*/*
+!Waste-*/res
+!Waste-*/README*

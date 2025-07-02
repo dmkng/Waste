@@ -1,0 +1,35 @@
+1 ICON icon.ico
+1 MANIFEST Waste.exe.manifest
+1 VERSIONINFO
+	FILEVERSION    0,0,0,1
+	PRODUCTVERSION 0,0,0,1
+	FILEFLAGSMASK 0x3fL
+	#ifdef NDEBUG
+		FILEFLAGS 0x0L
+	#else
+		FILEFLAGS 0x1L
+	#endif
+	FILEOS 0x4L
+	FILETYPE 0x1L
+	FILESUBTYPE 0x0L
+{
+	BLOCK "StringFileInfo"
+	{
+		BLOCK "040904b0"
+		{
+			VALUE "Comments",         "Waste\0"
+			VALUE "CompanyName",      "dmkng\0"
+			VALUE "FileDescription",  "Waste\0"
+			VALUE "FileVersion",      "0.0.0.1\0"
+			VALUE "InternalName",     "Waste\0"
+			VALUE "LegalCopyright",   "Copyright (c) 2025 dmkng\0"
+			VALUE "OriginalFilename", "Waste.exe\0"
+			VALUE "ProductName",      "Waste\0"
+			VALUE "ProductVersion",   "0.0.0.1\0"
+		}
+	}
+	BLOCK "VarFileInfo"
+	{
+		VALUE "Translation", 0x409, 1200
+	}
+}
