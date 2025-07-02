@@ -23,27 +23,51 @@
 // FPS lock in addition to VSync
 //#define FPS 60
 
-// Error description macro
-#define DESC(str) str, sizeof(str)
+struct Data {
+	SDL_Renderer *renderer;
 
-void DisplayError(uint8_t type, const char *desc, size_t desclen);
-SDL_Texture *RenderText(SDL_Renderer *renderer, TTF_Font *font, const char *text, SDL_Color color);
+	// For counter rendering
+	TTF_Font *counter_font;
 
-int main(int argc, char *argv[]) {
-	// For resizing and setting position
-	SDL_Rect upper_rect;
-	SDL_Rect lower_rect;
-	SDL_Rect rect;
+	// Cached text lines
+	SDL_Texture *upper_text, *lower_text, *counter_text;
 
-	// For events
-	SDL_Event e;
+	// For resizing and positioning text lines
+	SDL_Rect upper_rect, lower_rect, counter_rect;
 
-	// For timers
-	uint32_t ticks;
+	// Counter text
+	char text[21];
+
+	// Counter timer
 	uint32_t counter_ticks;
 
 	// Counter
-	uint64_t count = 0;
+	uint64_t count;
+} data;
+
+void Update(struct Data *data);
+void DisplayError(uint8_t type, const char *desc, size_t desclen);
+SDL_Texture *RenderText(SDL_Renderer *renderer, TTF_Font *font, const char *text, SDL_Color color);
+
+// Error description macro
+#define DESC(str) str, sizeof(str)
+
+// For updating the window when it's being moved
+static int SDLCALL ExposeEventWatcher(void *userdata, SDL_Event *e) {
+	if(e->type == SDL_WINDOWEVENT && e->window.event == SDL_WINDOWEVENT_EXPOSED) {
+		Update((struct Data *)userdata);
+	}
+	return 0;
+}
+
+int main(int argc, char *argv[]) {
+	// For events
+	SDL_Event e;
+
+	#ifdef FPS
+		// FPS lock timer
+		uint32_t ticks;
+	#endif
 
 	// Is muted
 	uint8_t muted = 0;
@@ -79,10 +103,10 @@ int main(int argc, char *argv[]) {
 	}
 
 	// Create renderer
-	SDL_Renderer *renderer = SDL_CreateRenderer(
+	data.renderer = SDL_CreateRenderer(
 		window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
 	);
-	if(renderer == NULL) {
+	if(data.renderer == NULL) {
 		DisplayError(0, DESC("Can't create renderer"));
 		SDL_DestroyWindow(window);
 		SDL_Quit();
@@ -90,9 +114,9 @@ int main(int argc, char *argv[]) {
 	}
 
 	// Set window background color
-	if(SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255) != 0) {
+	if(SDL_SetRenderDrawColor(data.renderer, 255, 255, 255, 255) != 0) {
 		DisplayError(0, DESC("Can't init window"));
-		SDL_DestroyRenderer(renderer);
+		SDL_DestroyRenderer(data.renderer);
 		SDL_DestroyWindow(window);
 		SDL_Quit();
 		return 1;
@@ -102,17 +126,17 @@ int main(int argc, char *argv[]) {
 	TTF_Font *normal_font = TTF_OpenFont("res/DroidSans.ttf", 30);
 	if(normal_font == NULL) {
 		DisplayError(1, DESC("Can't load required fonts"));
-		SDL_DestroyRenderer(renderer);
+		SDL_DestroyRenderer(data.renderer);
 		SDL_DestroyWindow(window);
 		TTF_Quit();
 		SDL_Quit();
 		return 1;
 	}
-	TTF_Font *counter_font = TTF_OpenFont("res/DroidSans.ttf", 80);
-	if(counter_font == NULL) {
+	data.counter_font = TTF_OpenFont("res/DroidSans.ttf", 80);
+	if(data.counter_font == NULL) {
 		DisplayError(1, DESC("Can't load required fonts"));
 		TTF_CloseFont(normal_font);
-		SDL_DestroyRenderer(renderer);
+		SDL_DestroyRenderer(data.renderer);
 		SDL_DestroyWindow(window);
 		TTF_Quit();
 		SDL_Quit();
@@ -123,8 +147,8 @@ int main(int argc, char *argv[]) {
 	if(Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 4096) == -1) {
 		DisplayError(2, DESC("Can't open audio device"));
 		TTF_CloseFont(normal_font);
-		TTF_CloseFont(counter_font);
-		SDL_DestroyRenderer(renderer);
+		TTF_CloseFont(data.counter_font);
+		SDL_DestroyRenderer(data.renderer);
 		SDL_DestroyWindow(window);
 		Mix_Quit();
 		TTF_Quit();
@@ -137,8 +161,8 @@ int main(int argc, char *argv[]) {
 	if(music == NULL) {
 		DisplayError(2, DESC("Can't load required sounds"));
 		TTF_CloseFont(normal_font);
-		TTF_CloseFont(counter_font);
-		SDL_DestroyRenderer(renderer);
+		TTF_CloseFont(data.counter_font);
+		SDL_DestroyRenderer(data.renderer);
 		SDL_DestroyWindow(window);
 		Mix_CloseAudio();
 		Mix_Quit();
@@ -147,31 +171,31 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 
-	// Colors
-	SDL_Color black = { 0, 0, 0, 255 };
+	// Create counter text
+	data.counter_text = RenderText(data.renderer, data.counter_font, "0", (SDL_Color){ 0, 0, 0, 255 });
+
+	// Get counter text size
+	SDL_QueryTexture(data.counter_text, NULL, NULL, &data.counter_rect.w, &data.counter_rect.h);
 
 	// Create upper text
-	SDL_Texture *upper_text = RenderText(renderer, normal_font, UPPER, black);
+	data.upper_text = RenderText(data.renderer, normal_font, UPPER, (SDL_Color){ 0, 0, 0, 255 });
 
 	// Get upper text size
-	SDL_QueryTexture(upper_text, NULL, NULL, &upper_rect.w, &upper_rect.h);
+	SDL_QueryTexture(data.upper_text, NULL, NULL, &data.upper_rect.w, &data.upper_rect.h);
 
 	// Set upper text position
-	upper_rect.x = WIDTH / 2 - upper_rect.w / 2;
-	upper_rect.y = 210;
+	data.upper_rect.x = WIDTH / 2 - data.upper_rect.w / 2;
+	data.upper_rect.y = HEIGHT / 2 - data.counter_rect.h / 2 - 10 - data.upper_rect.h;
 
 	// Create lower text
-	SDL_Texture *lower_text = RenderText(renderer, normal_font, LOWER, black);
+	data.lower_text = RenderText(data.renderer, normal_font, LOWER, (SDL_Color){ 0, 0, 0, 255 });
 
 	// Get lower text size
-	SDL_QueryTexture(lower_text, NULL, NULL, &lower_rect.w, &lower_rect.h);
+	SDL_QueryTexture(data.lower_text, NULL, NULL, &data.lower_rect.w, &data.lower_rect.h);
 
 	// Set lower text position
-	lower_rect.x = WIDTH / 2 - lower_rect.w / 2;
-	lower_rect.y = HEIGHT - 210 - lower_rect.h;
-
-	// Create counter text
-	SDL_Texture *counter = RenderText(renderer, counter_font, "0", black);
+	data.lower_rect.x = WIDTH / 2 - data.lower_rect.w / 2;
+	data.lower_rect.y = HEIGHT / 2 + data.counter_rect.h / 2 + 10;
 
 	// Play music
 	Mix_PlayMusic(music, -1);
@@ -181,11 +205,12 @@ int main(int argc, char *argv[]) {
 		Mix_PauseMusic();
 	}
 
-	// Start counter timer
-	counter_ticks = SDL_GetTicks();
+	// Start counter
+	data.counter_ticks = SDL_GetTicks();
+	data.count = 0;
 
-	// Counter text
-	char text[21];
+	// Update the window when it's being moved
+	SDL_AddEventWatch(ExposeEventWatcher, &data);
 
 	while(1) {
 		// Events
@@ -203,47 +228,12 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-		// Counter
-		ticks = SDL_GetTicks() - counter_ticks;
-		if(ticks >= 1000) { // 1 second elapsed
-			// Restart counter timer
-			counter_ticks = SDL_GetTicks();
-
-			// Increment counter and convert it to string
-			count += ticks / 1000;
-			snprintf(text, 21, "%" PRIu64, count);
-
-			// Refresh counter text
-			SDL_DestroyTexture(counter);
-			counter = RenderText(renderer, counter_font, text, black);
-		}
-
 		#ifdef FPS
 			// Start frame timer
 			ticks = SDL_GetTicks();
 		#endif
 
-		// Clear renderer
-		SDL_RenderClear(renderer);
-
-		// Display upper text
-		SDL_RenderCopy(renderer, upper_text, NULL, &upper_rect);
-
-		// Display lower text
-		SDL_RenderCopy(renderer, lower_text, NULL, &lower_rect);
-
-		// Get counter text size
-		SDL_QueryTexture(counter, NULL, NULL, &rect.w, &rect.h);
-
-		// Set counter text position
-		rect.x = WIDTH / 2 - rect.w / 2;
-		rect.y = HEIGHT / 2 - rect.h / 2;
-
-		// Display counter text
-		SDL_RenderCopy(renderer, counter, NULL, &rect);
-
-		// Show render
-		SDL_RenderPresent(renderer);
+		Update(&data);
 
 		#ifdef FPS
 			// Wait remaining time
@@ -255,19 +245,19 @@ int main(int argc, char *argv[]) {
 	}
 
 	// Destroy textures
-	SDL_DestroyTexture(upper_text);
-	SDL_DestroyTexture(lower_text);
-	SDL_DestroyTexture(counter);
+	SDL_DestroyTexture(data.upper_text);
+	SDL_DestroyTexture(data.lower_text);
+	SDL_DestroyTexture(data.counter_text);
 
 	// Destroy sounds
 	Mix_FreeMusic(music);
 
 	// Destroy fonts
 	TTF_CloseFont(normal_font);
-	TTF_CloseFont(counter_font);
+	TTF_CloseFont(data.counter_font);
 
 	// Destroy renderer and window
-	SDL_DestroyRenderer(renderer);
+	SDL_DestroyRenderer(data.renderer);
 	SDL_DestroyWindow(window);
 
 	// Close audio device
@@ -281,6 +271,46 @@ int main(int argc, char *argv[]) {
 }
 
 //////////////////////////////////////// Functions ////////////////////////////////////////
+
+void Update(struct Data *data) {
+	// Counter
+	uint32_t ticks = SDL_GetTicks() - data->counter_ticks;
+	if(ticks >= 1000) { // 1 second elapsed
+		// Restart counter timer
+		data->counter_ticks = SDL_GetTicks();
+
+		// Increment counter and convert it to string
+		data->count += ticks / 1000;
+		snprintf(data->text, 21, "%" PRIu64, data->count);
+
+		// Refresh counter text
+		SDL_DestroyTexture(data->counter_text);
+		data->counter_text = RenderText(data->renderer, data->counter_font, data->text, (SDL_Color){ 0, 0, 0, 255 });
+	}
+
+	// Clear renderer
+	SDL_RenderClear(data->renderer);
+
+	// Display upper text
+	SDL_RenderCopy(data->renderer, data->upper_text, NULL, &data->upper_rect);
+
+	// Display lower text
+	SDL_RenderCopy(data->renderer, data->lower_text, NULL, &data->lower_rect);
+
+	// Get counter text size
+	SDL_QueryTexture(data->counter_text, NULL, NULL, &data->counter_rect.w, &data->counter_rect.h);
+
+	// Set counter text position
+	data->counter_rect.x = WIDTH / 2 - data->counter_rect.w / 2;
+	data->counter_rect.y = HEIGHT / 2 - data->counter_rect.h / 2;
+
+	// Display counter text
+	SDL_RenderCopy(data->renderer, data->counter_text, NULL, &data->counter_rect);
+
+	// Show render
+	SDL_RenderPresent(data->renderer);
+}
+
 
 void DisplayError(uint8_t type, const char *desc, size_t desc_len) {
 	// Get SDL Error
