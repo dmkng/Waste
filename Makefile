@@ -58,7 +58,7 @@ ifeq ($(OS), Windows_NT)
 	endif
 else
 	EXE := $(NAME)
-	OUT_DIR := $(NAME)-Linux
+	OUT_DIR := $(NAME)-linux
 	TEST := cd $(OUT_DIR) && cp -f $(EXE) /tmp/$(EXE) && chmod +x /tmp/$(EXE) && xterm -T $(NAME) -e "/tmp/$(EXE) $(ARGS)" && rm -f /tmp/$(EXE)
 	CLEAN := rm -f $(OUT_DIR)/$(EXE) $(BUILD_DIR)/*
 	TIME := echo "        Compile Time: `date +%T`"
